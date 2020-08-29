@@ -1,4 +1,4 @@
-package com.datnht.easy_upload.utils
+package com.datnht.image_compress.utils
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -6,6 +6,11 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import com.datnht.image_compress.core.CACHE_EXTERNAL_STORAGE
+import com.datnht.image_compress.core.CACHE_INTERNAL_STORAGE
+import com.datnht.image_compress.core.CompressOptions
+import com.datnht.image_compress.core.INTERNAL_STORAGE
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -26,32 +31,25 @@ compress the file/photo from @param <b>path</b> to a private location on the cur
 fun getCompressed(
     context: Context?,
     path: String?,
-    quality: Int = 100,
-    compressHeight: Int? = null,
-    compressWidth: Int? = null
+    compressOptions: CompressOptions? = null
 ): File? {
     if (context == null) throw NullPointerException("Context must not be null.")
-    // getting device external cache directory, might not be available on some devices,
-    // so our code fall back to internal storage cache directory, which is always available but in smaller quantity
-    var cacheDir: File? = context.externalCacheDir
-    if (cacheDir == null) //fall back
-        cacheDir = context.cacheDir
-    val rootDir: String = cacheDir?.absolutePath?.toString() + "/ImageCompressor"
-    val root = File(rootDir)
 
-    //Create ImageCompressor folder if it doesn't already exists.
-    if (!root.exists()) root.mkdirs()
+    val root = getCompressDirectory(context, compressOptions)
+    val targetPathExtension =
+        if (compressOptions?.targetExtensionPath == null)
+            SDF.format(Date()).toString() + ".jpg" else compressOptions.targetExtensionPath
 
     //decode and resize the original bitmap from @param path.
     val bitmap =
         decodeImageFromFiles(
             path,  /* your desired width*/
-            compressWidth,  /*your desired height*/
-            compressHeight
+            compressOptions?.compressWidth,  /*your desired height*/
+            compressOptions?.compressHeight
         )
 
     //create placeholder for the compressed image file
-    val compressed = File(root, SDF.format(Date()).toString() + ".jpg")
+    val compressed = File(root, targetPathExtension)
 
     //convert the decoded bitmap to stream
     val byteArrayOutputStream = ByteArrayOutputStream()
@@ -59,7 +57,11 @@ fun getCompressed(
     // compress bitmap into byteArrayOutputStream
     // Bitmap.compress(Format, Quality, OutputStream)
     // Where Quality ranges from 1 - 100.
-    bitmap.compress(Bitmap.CompressFormat.JPEG, quality, byteArrayOutputStream)
+    bitmap.compress(
+        Bitmap.CompressFormat.JPEG,
+        compressOptions?.quality ?: 100,
+        byteArrayOutputStream
+    )
 
     // Right now, we have our bitmap inside byteArrayOutputStream Object,
     // all we need next is to write it to the compressed file we created earlier,
@@ -71,6 +73,42 @@ fun getCompressed(
 
     //File written, return to the caller. Done!
     return compressed
+}
+
+fun getCompressDirectory(context: Context, compressOptions: CompressOptions?): File {
+    if (compressOptions == null || compressOptions.directoryType == CACHE_EXTERNAL_STORAGE) {
+        // getting device external cache directory, might not be available on some devices,
+        // so our code fall back to internal storage cache directory, which is always available but in smaller quantity
+        var cacheDir: File? = context.externalCacheDir
+        if (cacheDir == null) //fall back
+            cacheDir = context.cacheDir
+        val rootDir: String = cacheDir?.absolutePath?.toString() + "/ImageCompressor"
+        val root = File(rootDir)
+
+        //Create ImageCompressor folder if it doesn't already exists.
+        if (!root.exists()) root.mkdirs()
+        return root
+    } else {
+        var targetDir: File? = when (compressOptions.directoryType) {
+            CACHE_INTERNAL_STORAGE -> {
+                context.cacheDir
+            }
+
+            INTERNAL_STORAGE -> {
+                context.filesDir
+            }
+
+            else -> {
+                context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+            }
+        }
+        val rootDir: String = targetDir?.absolutePath?.toString() + "/ImageCompressor"
+        val root = File(rootDir)
+
+        //Create ImageCompressor folder if it doesn't already exists.
+        if (!root.exists()) root.mkdirs()
+        return root
+    }
 }
 
 fun decodeImageFromFiles(path: String?, width: Int?, height: Int?): Bitmap {
@@ -99,17 +137,16 @@ fun getBitmap(context: Context, imageUri: Uri): Bitmap? {
                 imageUri
             )
         )
-
     } else {
         context
             .contentResolver
-            .openInputStream(imageUri) ?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-        }
+            .openInputStream(imageUri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream)
+            }
     }
 }
 
-fun convertBitmapToFile(destinationFile: File, bitmap: Bitmap) : File {
+fun convertBitmapToFile(destinationFile: File, bitmap: Bitmap): File {
     //create a file to write bitmap data
     destinationFile.createNewFile()
     //Convert bitmap to byte array
@@ -123,3 +160,4 @@ fun convertBitmapToFile(destinationFile: File, bitmap: Bitmap) : File {
     fos.close()
     return destinationFile;
 }
+
