@@ -68,6 +68,8 @@ Listener
         super.onDestroy()
         CompressManager.getCompressManager().onDestroyTask(workManager)
     }
+    
+  Note: Work doesn't accept non-primitive type of data. So we must use json to conver object/list <--> json and pass it to work class
 # Save File
 
 -SaveFileOptions: Choose the path directoty (inter - exter or share storage)
