@@ -5,8 +5,10 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.invoke
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -15,20 +17,21 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.datnht.core.JsonManager
+import com.datnht.core.*
 import com.datnht.image_compress.CompressManager
-import com.datnht.image_compress.core.CompressOptions
-import com.datnht.image_compress.core.INTERNAL_STORAGE
-import com.datnht.image_compress.core.ImageSource
+import com.datnht.image_compress.options.CompressOptions
 import com.datnht.image_compress.listener.IImageCompressTaskListener
 import com.datnht.image_compress.task.BackgroundImageCompressTask
 import com.datnht.image_compress.utils.getBitmap
+import com.datnht.save_file.SaveFileManager
+import com.datnht.save_file.options.SaveFileOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 
 
 class MainActivity : AppCompatActivity() {
 
+    private var uris = mutableListOf<Uri>()
     private var selectedBitmap: Bitmap? = null
     private val workManager = WorkManager.getInstance(this)
     private val askStoragePermission =
@@ -46,8 +49,9 @@ class MainActivity : AppCompatActivity() {
             uri?.let { it ->
                 // để gọi cái này: pickImages("image/*") pass mimetype kiểu này là cho phép user chọn img
                 // để gọi cái này: pickImages("video/*") pass mimetype kiểu này là cho phép user chọn video
-
-                selectedBitmap = getBitmap(this, it[0])
+                uris.addAll(it)
+                selectedBitmap =
+                    getBitmap(this, it[0])
                 image_origin.setImageBitmap(selectedBitmap)
 
 //                CompressManager.getCompressManager().foregroundCompress(
@@ -63,7 +67,7 @@ class MainActivity : AppCompatActivity() {
                 CompressManager.getCompressManager().backgroundCompressWork(
                     this,
                     workManager,
-                    ImageSource.UriSource(it),
+                    FileSource.UriSource(it),
                     options = CompressOptions(
                         quality = 10,
                         directoryType = INTERNAL_STORAGE
@@ -130,6 +134,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        button_save_image?.setOnClickListener {
+            if (!uris.isNullOrEmpty()) {
+                SaveFileManager.getSaveFileManager().saveFileWork(
+                    this,
+                    workManager,
+                    FileSource.UriSource(uris),
+                    SaveFileOptions(
+                        directoryType = INTERNAL_STORAGE
+                    )
+                )
+            }
+        }
         CompressManager.getCompressManager().getCompressWork(workManager)?.observe(this, Observer {
             if (!it.isNullOrEmpty()) {
                 val process = it.first().progress
@@ -142,11 +158,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+
+        SaveFileManager.getSaveFileManager().getSaveWork(workManager).observe(this, Observer {
+            if (!it.isNullOrEmpty() && it.first().state == WorkInfo.State.SUCCEEDED) {
+                Toast.makeText(this, "save succeed", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
 
     override fun onDestroy() {
         super.onDestroy()
-        CompressManager.getCompressManager().onDestroyTask()
+        CompressManager.getCompressManager().onDestroyTask(workManager)
+        SaveFileManager.getSaveFileManager().onDestroyTask(workManager)
     }
 }

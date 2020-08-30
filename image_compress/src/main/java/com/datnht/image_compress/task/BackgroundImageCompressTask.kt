@@ -5,9 +5,9 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.annotation.NonNull
 import androidx.work.*
+import com.datnht.core.FileSource
 import com.datnht.core.JsonManager
-import com.datnht.image_compress.core.CompressOptions
-import com.datnht.image_compress.core.ImageSource
+import com.datnht.image_compress.options.CompressOptions
 import com.datnht.image_compress.utils.SDF
 import com.datnht.image_compress.utils.convertBitmapToFile
 import com.datnht.image_compress.utils.getBitmap
@@ -30,11 +30,11 @@ class BackgroundImageCompressTask constructor(
         const val WORK_COMPRESS_PROCESS = "WORK_COMPRESS_PROCESS"
 
         fun getCompressWorkRequest(
-            imageSource: ImageSource,
+            imageSource: FileSource,
             compressOptions: CompressOptions?
         ): OneTimeWorkRequest.Builder {
             var isUriInput = false
-            if (imageSource is ImageSource.UriSource) {
+            if (imageSource is FileSource.UriSource) {
                 isUriInput = true
             }
             return OneTimeWorkRequestBuilder<BackgroundImageCompressTask>().setInputData(
@@ -46,14 +46,14 @@ class BackgroundImageCompressTask constructor(
             ).addTag(COMPRESS_WORK_TASK)
         }
 
-        private fun convertImageSourceToJson(imageSource: ImageSource): String {
+        private fun convertImageSourceToJson(imageSource: FileSource): String {
             val result = mutableListOf<String>()
             when (imageSource) {
-                is ImageSource.PathSource -> {
+                is FileSource.PathSource -> {
                     result.addAll(imageSource.paths)
                 }
 
-                is ImageSource.UriSource -> {
+                is FileSource.UriSource -> {
                     result.addAll(imageSource.uris.map {
                         it.toString()
                     }.toList())
@@ -79,7 +79,11 @@ class BackgroundImageCompressTask constructor(
             setProgress(firstUpdate)
             val jobs = getImageSourcePaths(jsonImageSource, isUriInput).map {
                 async {
-                    val file: File = getCompressed(context, it, compressOptions) ?: return@async
+                    val file: File = getCompressed(
+                        context,
+                        it,
+                        compressOptions
+                    ) ?: return@async
                     compressPaths.add(file.absolutePath)
                 }
             }
@@ -110,8 +114,14 @@ class BackgroundImageCompressTask constructor(
 
                     var bitmap: Bitmap?
                     it.forEach { uriString ->
-                        bitmap = getBitmap(context, Uri.parse(uriString))
-                        convertBitmapToFile(compressedTemp, bitmap ?: return@let)
+                        bitmap = getBitmap(
+                            context,
+                            Uri.parse(uriString)
+                        )
+                        convertBitmapToFile(
+                            compressedTemp,
+                            bitmap ?: return@let
+                        )
                         sourcePathsConvert.add(compressedTemp.path)
                     }
                 }

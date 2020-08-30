@@ -3,8 +3,9 @@ package com.datnht.image_compress
 import android.content.Context
 import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkManager
-import com.datnht.image_compress.core.CompressOptions
-import com.datnht.image_compress.core.ImageSource
+import com.datnht.image_compress.options.CompressOptions
+import com.datnht.core.FileSource
+import com.datnht.core.JsonManager
 import com.datnht.image_compress.listener.IImageCompressTaskListener
 import com.datnht.image_compress.task.BackgroundImageCompressTask
 import com.datnht.image_compress.task.ForegroundImageCompressTask
@@ -20,14 +21,14 @@ class CompressManager private constructor() {
 
     fun foregroundCompress(
         context: Context,
-        imageSource: ImageSource,
+        fileSource: FileSource,
         options: CompressOptions? = null,
         iImageCompressTaskListener: IImageCompressTaskListener? = null
     ) {
         executorService.execute(
             ForegroundImageCompressTask(
                 context,
-                imageSource,
+                fileSource,
                 options,
                 iImageCompressTaskListener
             )
@@ -37,12 +38,12 @@ class CompressManager private constructor() {
     fun backgroundCompressWork(
         context: Context,
         workManager: WorkManager,
-        imageSource: ImageSource,
+        fileSource: FileSource,
         options: CompressOptions? = null
     ) {
 
         val workRequest =
-            BackgroundImageCompressTask.getCompressWorkRequest(imageSource, options).build()
+            BackgroundImageCompressTask.getCompressWorkRequest(fileSource, options).build()
 
         workManager.enqueueUniqueWork(
             BackgroundImageCompressTask.COMPRESS_WORK_TASK,
@@ -54,7 +55,8 @@ class CompressManager private constructor() {
     fun getCompressWork(workManager: WorkManager) =
         workManager.getWorkInfosByTagLiveData(BackgroundImageCompressTask.COMPRESS_WORK_TASK)
 
-    fun onDestroyTask() {
-        executorService.shutdown()
+    fun onDestroyTask(workManager: WorkManager) {
+        executorService?.shutdown()
+        workManager.cancelAllWorkByTag(BackgroundImageCompressTask.COMPRESS_WORK_TASK)
     }
 }

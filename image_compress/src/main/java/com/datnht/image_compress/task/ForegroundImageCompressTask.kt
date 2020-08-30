@@ -4,8 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
-import com.datnht.image_compress.core.CompressOptions
-import com.datnht.image_compress.core.ImageSource
+import com.datnht.image_compress.options.CompressOptions
+import com.datnht.core.FileSource
 import com.datnht.image_compress.listener.IImageCompressTaskListener
 import com.datnht.image_compress.utils.SDF
 import com.datnht.image_compress.utils.convertBitmapToFile
@@ -18,7 +18,7 @@ import kotlin.collections.ArrayList
 
 class ForegroundImageCompressTask constructor(
     private val context: Context,
-    private var imageSource: ImageSource,
+    private var fileSource: FileSource,
     private var compressOptions: CompressOptions?,
     private val iImageCompressTaskListener: IImageCompressTaskListener? = null
 ) : Runnable {
@@ -29,9 +29,9 @@ class ForegroundImageCompressTask constructor(
     override fun run() {
         val originalPaths = mutableListOf<String>()
         try {
-            when(imageSource) {
-                is ImageSource.UriSource -> {
-                    (imageSource as? ImageSource.UriSource)?.uris?.let {
+            when(fileSource) {
+                is FileSource.UriSource -> {
+                    (fileSource as? FileSource.UriSource)?.uris?.let {
                         var cacheDir: File? = context.externalCacheDir
                         if (cacheDir == null) //fall back
                             cacheDir = context.cacheDir
@@ -42,18 +42,28 @@ class ForegroundImageCompressTask constructor(
 
                         var bitmap: Bitmap?
                         it.forEach { uri ->
-                            bitmap = getBitmap(context, uri)
-                            convertBitmapToFile(compressedTemp, bitmap ?: return@let)
+                            bitmap = getBitmap(
+                                context,
+                                uri
+                            )
+                            convertBitmapToFile(
+                                compressedTemp,
+                                bitmap ?: return@let
+                            )
                             originalPaths.add(compressedTemp.path)
                         }
                     }
                 }
-                is ImageSource.PathSource -> {
-                    originalPaths.addAll((imageSource as ImageSource.PathSource).paths)
+                is FileSource.PathSource -> {
+                    originalPaths.addAll((fileSource as FileSource.PathSource).paths)
                 }
             }
             for (path in originalPaths) {
-                val file: File = getCompressed(context, path, compressOptions) ?: return
+                val file: File = getCompressed(
+                    context,
+                    path,
+                    compressOptions
+                ) ?: return
                 result.add(file.path)
             }
             //use Handler to post the result back to the main Thread

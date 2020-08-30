@@ -7,10 +7,10 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import com.datnht.image_compress.core.CACHE_EXTERNAL_STORAGE
-import com.datnht.image_compress.core.CACHE_INTERNAL_STORAGE
-import com.datnht.image_compress.core.CompressOptions
-import com.datnht.image_compress.core.INTERNAL_STORAGE
+import com.datnht.core.CACHE_EXTERNAL_STORAGE
+import com.datnht.core.CACHE_INTERNAL_STORAGE
+import com.datnht.core.INTERNAL_STORAGE
+import com.datnht.image_compress.options.CompressOptions
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -35,7 +35,10 @@ fun getCompressed(
 ): File? {
     if (context == null) throw NullPointerException("Context must not be null.")
 
-    val root = getCompressDirectory(context, compressOptions)
+    val root = getCompressDirectory(
+        context,
+        compressOptions
+    )
     val targetPathExtension =
         if (compressOptions?.targetExtensionPath == null)
             SDF.format(Date()).toString() + ".jpg" else compressOptions.targetExtensionPath

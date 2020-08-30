@@ -15,6 +15,7 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/easy_upload" />
             <option value="$PROJECT_DIR$/image_compress" />
+            <option value="$PROJECT_DIR$/save_file" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

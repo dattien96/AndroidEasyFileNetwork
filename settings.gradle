@@ -1,3 +1,4 @@
+include ':save_file'
 include ':core'
 include ':image_compress'
 include ':easy_upload'
