@@ -100,3 +100,20 @@ Listener
         super.onDestroy()
         SaveFileManager.getSaveFileManager().onDestroyTask(workManager)
     }
+    
+# Upload File
+
+      uploadAttachment(request.filename, request.file, request.mimeType)
+    .subscribeOn(appRxSchedulers.io)
+    .observeOn(appRxSchedulers.main)
+    .subscribeBy(
+        onError = { error ->
+            // Display error alert
+        },
+        onComplete = {
+            // Display completed Snackbar
+        },
+        onNext = { progress ->
+            // Update progress bar
+        }
+    )
